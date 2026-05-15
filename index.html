@@ -1,0 +1,277 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TaskFlow</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      background: #f7f7f7;
+      color: #222;
+      display: flex;
+      min-height: 100vh;
+    }
+
+    aside {
+      width: 260px;
+      background: #fff;
+      border-right: 1px solid #ddd;
+      padding: 24px;
+    }
+
+    .logo {
+      font-size: 24px;
+      font-weight: bold;
+      color: #e44332;
+      margin-bottom: 30px;
+    }
+
+    .menu button {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      background: transparent;
+      text-align: left;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 15px;
+      margin-bottom: 6px;
+    }
+
+    .menu button:hover,
+    .menu button.active {
+      background: #ffe9e6;
+      color: #e44332;
+    }
+
+    main {
+      flex: 1;
+      padding: 40px;
+      max-width: 900px;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+      font-size: 32px;
+    }
+
+    .add-task {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 25px;
+    }
+
+    .add-task input {
+      flex: 1;
+      padding: 14px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+
+    .add-task button {
+      padding: 14px 20px;
+      border: none;
+      background: #e44332;
+      color: #fff;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    .task {
+      background: #fff;
+      padding: 16px;
+      border-radius: 10px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border: 1px solid #e5e5e5;
+    }
+
+    .task-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .task input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
+
+    .task.completed span {
+      text-decoration: line-through;
+      color: #999;
+    }
+
+    .delete {
+      border: none;
+      background: transparent;
+      color: #999;
+      cursor: pointer;
+      font-size: 20px;
+    }
+
+    .delete:hover {
+      color: #e44332;
+    }
+
+    .empty {
+      color: #777;
+      text-align: center;
+      margin-top: 40px;
+    }
+
+    @media (max-width: 700px) {
+      body {
+        flex-direction: column;
+      }
+
+      aside {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid #ddd;
+      }
+
+      main {
+        padding: 24px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <aside>
+    <div class="logo">TaskFlow</div>
+    <div class="menu">
+      <button class="active" onclick="setFilter('all', this)">Все задачи</button>
+      <button onclick="setFilter('active', this)">Активные</button>
+      <button onclick="setFilter('completed', this)">Выполненные</button>
+    </div>
+  </aside>
+
+  <main>
+    <h1>Сегодня</h1>
+
+    <div class="add-task">
+      <input id="taskInput" type="text" placeholder="Добавить новую задачу..." />
+      <button onclick="addTask()">Добавить</button>
+    </div>
+
+    <div id="taskList"></div>
+    <p id="emptyText" class="empty">Пока задач нет</p>
+  </main>
+
+  <script>
+    let tasks = JSON.parse(localStorage.getItem("tasks")) || [];
+    let filter = "all";
+
+    const taskInput = document.getElementById("taskInput");
+    const taskList = document.getElementById("taskList");
+    const emptyText = document.getElementById("emptyText");
+
+    taskInput.addEventListener("keydown", function(event) {
+      if (event.key === "Enter") {
+        addTask();
+      }
+    });
+
+    function saveTasks() {
+      localStorage.setItem("tasks", JSON.stringify(tasks));
+    }
+
+    function addTask() {
+      const text = taskInput.value.trim();
+
+      if (text === "") return;
+
+      tasks.push({
+        id: Date.now(),
+        text: text,
+        completed: false
+      });
+
+      taskInput.value = "";
+      saveTasks();
+      renderTasks();
+    }
+
+    function toggleTask(id) {
+      tasks = tasks.map(task =>
+        task.id === id ? { ...task, completed: !task.completed } : task
+      );
+
+      saveTasks();
+      renderTasks();
+    }
+
+    function deleteTask(id) {
+      tasks = tasks.filter(task => task.id !== id);
+
+      saveTasks();
+      renderTasks();
+    }
+
+    function setFilter(value, button) {
+      filter = value;
+
+      document.querySelectorAll(".menu button").forEach(btn => {
+        btn.classList.remove("active");
+      });
+
+      button.classList.add("active");
+      renderTasks();
+    }
+
+    function renderTasks() {
+      taskList.innerHTML = "";
+
+      let filteredTasks = tasks;
+
+      if (filter === "active") {
+        filteredTasks = tasks.filter(task => !task.completed);
+      }
+
+      if (filter === "completed") {
+        filteredTasks = tasks.filter(task => task.completed);
+      }
+
+      emptyText.style.display = filteredTasks.length === 0 ? "block" : "none";
+
+      filteredTasks.forEach(task => {
+        const taskElement = document.createElement("div");
+        taskElement.className = "task" + (task.completed ? " completed" : "");
+
+        taskElement.innerHTML = `
+          <div class="task-left">
+            <input 
+              type="checkbox" 
+              ${task.completed ? "checked" : ""} 
+              onchange="toggleTask(${task.id})"
+            />
+            <span>${task.text}</span>
+          </div>
+          <button class="delete" onclick="deleteTask(${task.id})">×</button>
+        `;
+
+        taskList.appendChild(taskElement);
+      });
+    }
+
+    renderTasks();
+  </script>
+
+</body>
+</html>
+```
